@@ -28,9 +28,6 @@ body {
 .wrapperClientsBlock {
   flex-grow: 2;
 }
-/* .content {
-  text-align: center;
-} */
 .modal {
   background-color: rgba(250, 218, 221, 0.5);
   width: 100%;

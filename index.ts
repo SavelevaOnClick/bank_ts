@@ -36,7 +36,6 @@ class Bank {
       )
     ).json();
   }
-
   async toStorage(): Promise<void> {
     (await this.getCurses()).forEach(
       (item) =>
@@ -45,14 +44,12 @@ class Bank {
     );
     localStorage.setItem("uah", "1");
   }
-
   getAllAssets(currency: string): number {
     return this.clients.reduce((acum, client) => {
       acum += this.getClientAssets(client, currency);
       return acum;
     }, 0);
   }
-
   getClientAssets(client: Client, currency: string): number {
     let sum: number = 0;
     for (let account of client.accounts) {
@@ -66,7 +63,6 @@ class Bank {
     }
     return sum;
   }
-
   getSumAllCredits(status: boolean, currency: string): Record<number, number> {
     let sum = 0;
     let counter: number = 0;
@@ -118,7 +114,6 @@ class Bank {
         }
       }
     }
-    console.log(creditSum);
     return creditSum;
   }
 
