@@ -1,0 +1,88 @@
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  background-color: #e1caad;
+}
+.output {
+  background-color: #fff;
+  display: block;
+  width: 200px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#root {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+}
+.lists {
+  padding-top: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.wrapperClientsBlock {
+  flex-grow: 2;
+}
+/* .content {
+  text-align: center;
+} */
+.modal {
+  background-color: rgba(250, 218, 221, 0.5);
+  width: 100%;
+  height: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: none;
+  padding-top: 100px;
+}
+.modal form {
+  padding: 40px;
+  background-color: #9cd8d6;
+  width: 45%;
+}
+.modal form input {
+  display: block;
+  width: 100%;
+  border: 3px solid #31b4ae;
+  margin-bottom: 10px;
+  margin-left: -10px;
+  border-radius: 5px;
+  padding: 10px 0 10px 10px;
+}
+.active {
+  display: flex;
+  flex-direction: column;
+  /* justify-content: center; */
+  align-items: center;
+}
+.card {
+  margin: 20px;
+  border: 2px solid #654321;
+  border-radius: 5px;
+  padding: 20px;
+}
+.title {
+  color: #654321;
+  text-transform: uppercase;
+  font-family: arial;
+  text-align: center;
+}
+.wrapperInfo {
+  flex-basis: 40%;
+}
+.account {
+  border: 4px solid violet;
+  background-color: #e1caad;
+  margin: 0 -40px;
+  padding: 5px;
+  margin-bottom: 20px;
+}
+div.account:last-child {
+  margin-bottom: 0;
+}
