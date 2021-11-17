@@ -1,17 +1,43 @@
-"use strict";
+interface Client {
+  id: number;
+  name: string;
+  surname: string;
+  patronymic: string;
+  status: boolean;
+  registration: string;
+  accounts: account[];
+}
+type account = CreditCard | Card;
+
+interface Card {
+  account: string;
+  balance: number;
+  currency: string;
+  activity: string;
+}
+interface listener {
+  (container: HTMLFormElement, event: MouseEvent): void;
+}
+interface CreditCard extends Card {
+  creditLimits: number;
+}
+
 class Bank {
+  clients: Clients[];
+  id: number;
   constructor() {
     this.clients = [];
     this.id = 3;
+    this.toStorage();
   }
-  async getCurses() {
+  async getCurses(): Promise<Record<string, string>[]> {
     return await (
       await fetch(
         "https://api.privatbank.ua/p24api/pubinfo?exchange&json&coursid=11"
       )
     ).json();
   }
-  async toStorage() {
+  async toStorage(): Promise<void> {
     (await this.getCurses()).forEach(
       (item) =>
         item.base_ccy === "UAH" &&
@@ -19,14 +45,15 @@ class Bank {
     );
     localStorage.setItem("uah", "1");
   }
-  getAllAssets(currency) {
+  getAllAssets(currency: string): number {
+    console.log(currency);
     return this.clients.reduce((acum, client) => {
       acum += this.getClientAssets(client, currency);
       return acum;
     }, 0);
   }
-  getClientAssets(client, currency) {
-    let sum = 0;
+  getClientAssets(client: Client, currency: string): number {
+    let sum: number = 0;
     for (let account of client.accounts) {
       if (account.currency !== currency) {
         sum +=
@@ -38,10 +65,10 @@ class Bank {
     }
     return sum;
   }
-  getSumAllCredits(status, currency) {
+  getSumAllCredits(status: boolean, currency: string): Record<number, number> {
     let sum = 0;
-    let counter = 0;
-    let result = {};
+    let counter: number = 0;
+    let result: Record<number, number> = {};
     for (let client of this.clients) {
       if (client.status === status && this.hasActiveCredit(client)) {
         sum += this.getSumClientCredit(client, currency);
@@ -51,7 +78,7 @@ class Bank {
     Object.assign(result, { [counter]: sum });
     return result;
   }
-  getAllCredits(currency) {
+  getAllCredits(currency: string): number {
     let creditSum = 0;
     for (let client of this.clients) {
       if (this.hasActiveCredit(client)) {
@@ -60,55 +87,68 @@ class Bank {
     }
     return creditSum;
   }
-  hasActiveCredit(client) {
+  hasActiveCredit(client: Client): boolean {
     for (let account of client.accounts) {
       if (
         account.account === "credit" &&
-        account.creditLimits > account.balance
+        (account as CreditCard).creditLimits > account.balance
       ) {
         return true;
       }
     }
     return false;
   }
-  getSumClientCredit(client, currency) {
+
+  getSumClientCredit(client: Client, currency: string): number {
     let creditSum = 0;
     for (let account of client.accounts) {
       if (
         account.account === "credit" &&
-        account.creditLimits > account.balance
+        (account as CreditCard).creditLimits > account.balance
       ) {
         if (account.currency !== currency) {
           creditSum +=
             (Number(localStorage.getItem(account.currency)) *
-              (account.creditLimits - account.balance)) /
+              ((account as CreditCard).creditLimits - account.balance)) /
             Number(localStorage.getItem(currency));
         } else {
-          creditSum += account.creditLimits - account.balance;
+          creditSum += (account as CreditCard).creditLimits - account.balance;
         }
       }
     }
     return creditSum;
   }
-  addClient(data) {
+
+  addClient(data: Clients): void {
     this.clients.push(data);
   }
-  deleteClient(id) {
+
+  deleteClient(id: number): void {
     const index = this.getIndexClient(id);
     this.clients.splice(index, 1);
   }
-  addCard(id, dataAccount) {
+
+  addCard(id: number, dataAccount: account): void {
     const index = this.getIndexClient(id);
     this.clients[index].addAccount(dataAccount);
   }
-  getIndexClient(id) {
+
+  getIndexClient(id: number): number {
     return this.clients.findIndex((client) => {
       return client.id === id;
     });
   }
 }
 class Clients {
-  constructor(data) {
+  id: number;
+  name: string;
+  surname: string;
+  patronymic: string;
+  status: boolean;
+  registration: string;
+  accounts: account[];
+
+  constructor(data: Client) {
     this.id = data.id;
     this.name = data.name;
     this.surname = data.surname;
@@ -116,20 +156,25 @@ class Clients {
     this.status = data.status;
     (this.registration = data.registration), (this.accounts = data.accounts);
   }
-  addAccount(account) {
+  addAccount(account: Card): void {
     this.accounts.push(account);
   }
 }
+
 class Render {
-  constructor(container, bankCalculation) {
+  root: HTMLElement;
+  bankCalculation: Bank;
+  modal: HTMLElement;
+  counter: number;
+  constructor(container: string, bankCalculation: Bank) {
     this.bankCalculation = bankCalculation;
-    this.root = document.querySelector(container);
+    this.root = document.querySelector(container) as HTMLElement;
     this.mainRender(this.root);
     this.modal = this.createModal();
     this.root.append(this.modal);
     this.counter = 0;
   }
-  mainRender(container) {
+  mainRender(container: HTMLElement): void {
     const wrapperClientsBlock = this.create("div", {
       className: "wrapperClientsBlock",
     });
@@ -180,6 +225,7 @@ class Render {
     });
     creditBlock.append(creditOutput);
     infoBlock.append(creditBlock);
+
     btnCredit.onclick = this.getCreditsOnclick.bind(
       this,
       selectStatus,
@@ -241,6 +287,7 @@ class Render {
       className: "output",
     });
     allCredit.append(btnAllCredit, selectCurrencyAllCredit, allCreditOutput);
+
     btnAllCredit.onclick = this.getAllCreditsOnclick.bind(
       this,
       selectCurrencyAllCredit,
@@ -269,17 +316,16 @@ class Render {
   addNewClientOnclick() {
     this.showeModal();
   }
-  handleClick(event) {
-    const dataAtribbute = event.target.getAttribute("data-action");
+  handleClick(event: any): void {
+    const dataAtribbute: string = event.target.getAttribute("data-action");
     if (dataAtribbute) {
       event.preventDefault();
-      const temp = event.target.closest("div.card");
+      const temp: HTMLDivElement = event.target.closest("div.card");
       const id = Number(temp.getAttribute("data-id"));
-      console.log(id);
       dataAtribbute === "deleteClient" ? this.deleteClient(id) : this.edit(id);
     }
   }
-  renderClientsList(container) {
+  renderClientsList(container: HTMLElement): HTMLElement {
     container.innerHTML = "";
     this.bankCalculation.clients.forEach((client) => {
       container.append(this.renderCard(client));
@@ -287,19 +333,19 @@ class Render {
     container.onclick = this.handleClick.bind(this);
     return container;
   }
-  deleteClient(id) {
+  deleteClient(id: number): void {
     this.bankCalculation.clients.splice(
       this.bankCalculation.getIndexClient(id),
       1
     );
-    this.renderClientsList(this.root.querySelector(".lists"));
+    this.renderClientsList(this.root.querySelector(".lists") as HTMLDivElement);
   }
-  edit(id) {
+  edit(id: number): void {
     const index = this.bankCalculation.getIndexClient(id);
     console.log(id);
     this.showeModal(this.bankCalculation.clients[index]);
   }
-  renderCard(dataClient) {
+  renderCard(dataClient: Client): HTMLElement {
     const card = this.create("div", {
       className: "card",
     });
@@ -328,23 +374,31 @@ class Render {
     });
     return card;
   }
-  getAllCreditsOnclick(selectCurrency, container) {
+  getAllCreditsOnclick(
+    selectCurrency: HTMLSelectElement,
+    container: HTMLElement
+  ): void {
     const currency = this.getSelectValue(selectCurrency);
     container.innerText = this.bankCalculation
       .getAllCredits(currency)
       .toFixed(2);
   }
-  getAllAssetsOnclick(selectCurrency, container) {
+  getAllAssetsOnclick(
+    selectCurrency: HTMLSelectElement,
+    container: HTMLElement
+  ): void {
     const currency = this.getSelectValue(selectCurrency);
-    container.innerText = String(this.bankCalculation.getAllAssets(currency));
+    container.innerText = this.bankCalculation
+      .getAllAssets(currency)
+      .toFixed(2);
   }
-  createModal() {
+  createModal(): HTMLElement {
     const modal = this.create("div", {
       className: "modal",
     });
     return modal;
   }
-  createCardForm(event) {
+  createCardForm(event: MouseEvent): void {
     if (!this.modal.querySelector(".accountInfo")) {
       event.preventDefault();
       const form = this.create("div", {
@@ -393,19 +447,23 @@ class Render {
         balanceInput,
         creditLimitInput
       );
-      selectTypeCard.onchange = (event) => {
+      selectTypeCard.onchange = (event: any) => {
         creditLimitInput.disabled =
           this.getSelectValue(event.target) !== "credit";
       };
       this.modal.querySelector("form")?.append(form);
     }
   }
-  getSelectValue(select) {
+  getSelectValue(select: HTMLSelectElement): string {
     let indexSelect = select.options.selectedIndex;
     let valueSelect = select.options[indexSelect].value;
     return valueSelect;
   }
-  getCreditsOnclick(selectStatus, selectCurrency, container) {
+  getCreditsOnclick(
+    selectStatus: HTMLSelectElement,
+    selectCurrency: HTMLSelectElement,
+    container: HTMLElement
+  ): void {
     const currency = this.getSelectValue(selectCurrency);
     const status = Boolean(Number(this.getSelectValue(selectStatus)));
     const resultCredit = this.bankCalculation.getSumAllCredits(
@@ -416,8 +474,8 @@ class Render {
       container.innerHTML = `${[prop]}: ${resultCredit[prop].toFixed(2)}`;
     }
   }
-  showeModal(dataClient) {
-    const id = dataClient?.id ?? 0;
+  showeModal(dataClient?: Client): void {
+    const id: number = dataClient?.id ?? 0;
     const form = this.create("form", {
       className: "newClientFormData",
       action: "#",
@@ -451,7 +509,7 @@ class Render {
         className: "select",
       }
     );
-    const btnSend = this.createBtn({
+    const btnSend: HTMLButtonElement = this.createBtn({
       type: "button",
       className: "btn",
       innerText: "отправить",
@@ -474,9 +532,9 @@ class Render {
     this.modal.append(form);
     this.modal.classList.add("active");
   }
-  click(id, event) {
+  click(id: number, event: MouseEvent): void {
     event.preventDefault();
-    const form = this.modal.querySelector("form");
+    const form = this.modal.querySelector("form") as HTMLFormElement;
     console.log(form);
     const formData = new FormData(form);
     this.modal.innerHTML = "";
@@ -505,8 +563,9 @@ class Render {
       id = client.id;
       this.bankCalculation.addClient(client);
     }
+
     if (formData.has("account")) {
-      const card = {
+      const card: account = {
         balance: Number(formData.get("balance")),
         account: String(formData.get("account")),
         currency: String(formData.get("currency")),
@@ -518,9 +577,12 @@ class Render {
         });
       this.bankCalculation.addCard(id, card);
     }
-    this.renderClientsList(this.root.querySelector(".lists"));
+    this.renderClientsList(this.root.querySelector(".lists") as HTMLDivElement);
   }
-  createSelect(parameters, props) {
+  createSelect(
+    parameters: Record<string, string>,
+    props: Record<string, string>
+  ): HTMLSelectElement {
     const select = document.createElement("select");
     for (let parameter in parameters) {
       select.append(new Option(parameters[parameter], parameter));
@@ -528,17 +590,17 @@ class Render {
     Object.assign(select, props);
     return select;
   }
-  createInput(props) {
+  createInput(props: Record<string, string>): HTMLInputElement {
     const input = document.createElement("input");
     Object.assign(input, props);
     return input;
   }
-  createBtn(props) {
+  createBtn(props: Record<string, string>): HTMLButtonElement {
     const button = document.createElement("button");
     Object.assign(button, props);
     return button;
   }
-  create(type, props) {
+  create(type: string, props: Record<string, string>): HTMLElement {
     const element = document.createElement(type);
     Object.assign(element, props);
     return element;
@@ -583,5 +645,6 @@ bank.clients[0].addAccount({
   currency: "eur",
   activity: "Sat Apr 13 2025",
 });
+
 bank.deleteClient(3);
 const renderBank = new Render("#root", bank);
